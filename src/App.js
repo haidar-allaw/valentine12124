@@ -1,25 +1,195 @@
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
 
-function App() {
+export default function App() {
+  const cardRef = useRef(null);
+  const noBtnRef = useRef(null);
+  const yesBtnRef = useRef(null);
+
+  const noTexts = useMemo(
+    () => [
+      "No",
+      "Are you sure?",
+      "Really sure?",
+      "Think again 😶",
+      "Last chance!",
+      "Please? 🥺",
+      "Don’t do this 😭",
+      "Why tho? 😔",
+      "Stoppp 😤",
+      "I’m gonna run 😳",
+    ],
+    []
+  );
+
+  const [noIndex, setNoIndex] = useState(0);
+  const [noPos, setNoPos] = useState({ x: 0, y: 0 });
+  const [yesClicked, setYesClicked] = useState(false);
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  const moveNo = () => {
+    const card = cardRef.current;
+    const noBtn = noBtnRef.current;
+    const yesBtn = yesBtnRef.current;
+    if (!card || !noBtn) return;
+
+    const c = card.getBoundingClientRect();
+    const b = noBtn.getBoundingClientRect();
+    const yesRect = yesBtn?.getBoundingClientRect();
+
+    // Calculate position relative to the viewport (for position: fixed)
+    // Since we use transform: translate(-50%, -50%), left/top represent the center point
+    const pad = 18;
+    const buttonPadding = 25; // Extra padding to avoid Yes button
+
+    // Allow movement in a wider area around the card
+    // Account for button width/height since we're centering it
+    const minX = c.left - c.width * 0.3 + b.width / 2;
+    const maxX = c.right + c.width * 0.3 - b.width / 2;
+
+    const minY = c.top + c.height * 0.55 + b.height / 2; // start below the subtitle area
+    const maxY = c.bottom - pad - b.height / 2;
+
+    // Function to check if position overlaps with Yes button
+    const overlapsWithYes = (x, y) => {
+      if (!yesRect) return false;
+
+      // Calculate the bounds of the No button at this position
+      // Since we use translate(-50%, -50%), x,y is the center
+      const noLeft = x - b.width / 2;
+      const noRight = x + b.width / 2;
+      const noTop = y - b.height / 2;
+      const noBottom = y + b.height / 2;
+
+      // Check if No button overlaps with Yes button (with padding)
+      const yesLeft = yesRect.left - buttonPadding;
+      const yesRight = yesRect.right + buttonPadding;
+      const yesTop = yesRect.top - buttonPadding;
+      const yesBottom = yesRect.bottom + buttonPadding;
+
+      return !(
+        noRight < yesLeft ||
+        noLeft > yesRight ||
+        noBottom < yesTop ||
+        noTop > yesBottom
+      );
+    };
+
+    // Try to find a position that doesn't overlap with Yes button
+    let attempts = 0;
+    let x, y;
+    do {
+      x = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+      y = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
+      attempts++;
+      // Limit attempts to avoid infinite loop
+      if (attempts > 50) break;
+    } while (overlapsWithYes(x, y));
+
+    setNoPos({
+      x: clamp(x, minX, maxX),
+      y: clamp(y, minY, maxY),
+    });
+  };
+
+  const onNoAttempt = (e) => {
+    e.preventDefault();
+    setNoIndex((i) => (i + 1) % noTexts.length);
+    moveNo();
+  };
+
+  const onYesClick = () => {
+    setYesClicked(true);
+  };
+
+  useEffect(() => {
+    // Initialize position relative to card
+    const card = cardRef.current;
+    const noBtn = noBtnRef.current;
+    if (card && noBtn) {
+      const c = card.getBoundingClientRect();
+      // Position it at the initial button location (center-right of card)
+      const initialX = c.left + c.width * 0.5;
+      const initialY = c.top + c.height * 0.62;
+      setNoPos({ x: initialX, y: initialY });
+    }
+    const onResize = () => moveNo();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="page">
+      {!yesClicked ? (
+        <>
+          <div className="card" ref={cardRef}>
+            <div className="hearts" aria-hidden="true">
+              <span>💗</span><span>💘</span><span>💞</span><span>💓</span>
+            </div>
+
+            <h1 className="title">Would you be my valentine?</h1>
+            <p className="subtitle">No pressure… but I'll be very happy 😌</p>
+
+            <div className="buttons">
+              <button ref={yesBtnRef} className="btn yes" onClick={onYesClick}>Yes</button>
+            </div>
+          </div>
+
+          {/* NO button moved outside card so it can escape and appear above background */}
+          <button
+            ref={noBtnRef}
+            className="btn no noEscape"
+            style={{
+              left: `${noPos.x}px`,
+              top: `${noPos.y}px`,
+              transform: 'translate(-50%, -50%)'
+            }}
+            onMouseEnter={onNoAttempt}
+            onMouseDown={onNoAttempt}
+            onClick={(e) => e.preventDefault()}
+            aria-label="No"
+          >
+            {noTexts[noIndex]}
+          </button>
+        </>
+      ) : (
+        <div className="celebration">
+          <div className="celebration-content">
+            <div className="celebration-hearts">
+              <span className="heart-emoji">💕</span>
+              <span className="heart-emoji">💖</span>
+              <span className="heart-emoji">💗</span>
+              <span className="heart-emoji">💘</span>
+              <span className="heart-emoji">💝</span>
+              <span className="heart-emoji">💞</span>
+              <span className="heart-emoji">💓</span>
+              <span className="heart-emoji">💟</span>
+            </div>
+            <h1 className="celebration-text">yayy! i love you pookie</h1>
+            <div className="celebration-hearts">
+              <span className="heart-emoji">💕</span>
+              <span className="heart-emoji">💖</span>
+              <span className="heart-emoji">💗</span>
+              <span className="heart-emoji">💘</span>
+              <span className="heart-emoji">💝</span>
+              <span className="heart-emoji">💞</span>
+              <span className="heart-emoji">💓</span>
+              <span className="heart-emoji">💟</span>
+            </div>
+          </div>
+          <div className="confetti">
+            {[...Array(50)].map((_, i) => (
+              <div key={i} className="confetti-piece" style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`
+              }}></div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default App;
