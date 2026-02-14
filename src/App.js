@@ -25,6 +25,7 @@ export default function App() {
   const [noIndex, setNoIndex] = useState(0);
   const [noPos, setNoPos] = useState({ x: 0, y: 0 });
   const [yesClicked, setYesClicked] = useState(false);
+  const [noButtonEscaped, setNoButtonEscaped] = useState(false);
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -95,6 +96,7 @@ export default function App() {
 
   const onNoAttempt = (e) => {
     e.preventDefault();
+    setNoButtonEscaped(true); // Mark that button has escaped
     setNoIndex((i) => (i + 1) % noTexts.length);
     moveNo();
   };
@@ -104,21 +106,37 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Initialize position relative to card
-    const card = cardRef.current;
-    const noBtn = noBtnRef.current;
-    if (card && noBtn) {
-      const c = card.getBoundingClientRect();
-      // Position it at the initial button location (center-right of card)
-      const initialX = c.left + c.width * 0.5;
-      const initialY = c.top + c.height * 0.62;
-      setNoPos({ x: initialX, y: initialY });
-    }
-    const onResize = () => moveNo();
+    // Initialize position - keep it in normal flow initially
+    setNoPos({ x: 0, y: 0 });
+    const onResize = () => {
+      if (noButtonEscaped) {
+        moveNo();
+      }
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Position the button when it first escapes
+  useEffect(() => {
+    if (noButtonEscaped && noPos.x === 0 && noPos.y === 0) {
+      // Small delay to ensure button is rendered
+      setTimeout(() => {
+        const card = cardRef.current;
+        const yesBtn = yesBtnRef.current;
+        if (card && yesBtn) {
+          const c = card.getBoundingClientRect();
+          const yesRect = yesBtn.getBoundingClientRect();
+          // Position it to the right of Yes button initially
+          const initialX = yesRect.right + 60;
+          const initialY = yesRect.top + yesRect.height / 2;
+          setNoPos({ x: initialX, y: initialY });
+        }
+      }, 10);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noButtonEscaped]);
 
   return (
     <div className="page">
@@ -134,25 +152,39 @@ export default function App() {
 
             <div className="buttons">
               <button ref={yesBtnRef} className="btn yes" onClick={onYesClick}>Yes</button>
+              {!noButtonEscaped ? (
+                <button
+                  ref={noBtnRef}
+                  className="btn no"
+                  onMouseEnter={onNoAttempt}
+                  onMouseDown={onNoAttempt}
+                  onClick={(e) => e.preventDefault()}
+                  aria-label="No"
+                >
+                  {noTexts[noIndex]}
+                </button>
+              ) : null}
             </div>
           </div>
 
           {/* NO button moved outside card so it can escape and appear above background */}
-          <button
-            ref={noBtnRef}
-            className="btn no noEscape"
-            style={{
-              left: `${noPos.x}px`,
-              top: `${noPos.y}px`,
-              transform: 'translate(-50%, -50%)'
-            }}
-            onMouseEnter={onNoAttempt}
-            onMouseDown={onNoAttempt}
-            onClick={(e) => e.preventDefault()}
-            aria-label="No"
-          >
-            {noTexts[noIndex]}
-          </button>
+          {noButtonEscaped && (
+            <button
+              ref={noBtnRef}
+              className="btn no noEscape"
+              style={{
+                left: `${noPos.x}px`,
+                top: `${noPos.y}px`,
+                transform: 'translate(-50%, -50%)'
+              }}
+              onMouseEnter={onNoAttempt}
+              onMouseDown={onNoAttempt}
+              onClick={(e) => e.preventDefault()}
+              aria-label="No"
+            >
+              {noTexts[noIndex]}
+            </button>
+          )}
         </>
       ) : (
         <div className="celebration">
