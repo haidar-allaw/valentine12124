@@ -46,11 +46,22 @@ export default function App() {
 
     // Allow movement in a wider area around the card
     // Account for button width/height since we're centering it
-    const minX = c.left - c.width * 0.3 + b.width / 2;
-    const maxX = c.right + c.width * 0.3 - b.width / 2;
+    // On mobile, limit movement to viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const isMobile = viewportWidth < 480;
+
+    const minX = isMobile
+      ? b.width / 2 + pad
+      : c.left - c.width * 0.3 + b.width / 2;
+    const maxX = isMobile
+      ? viewportWidth - b.width / 2 - pad
+      : c.right + c.width * 0.3 - b.width / 2;
 
     const minY = c.top + c.height * 0.55 + b.height / 2; // start below the subtitle area
-    const maxY = c.bottom - pad - b.height / 2;
+    const maxY = isMobile
+      ? Math.min(c.bottom - pad - b.height / 2, viewportHeight - b.height / 2 - pad)
+      : c.bottom - pad - b.height / 2;
 
     // Function to check if position overlaps with Yes button
     const overlapsWithYes = (x, y) => {
@@ -123,10 +134,8 @@ export default function App() {
     if (noButtonEscaped && noPos.x === 0 && noPos.y === 0) {
       // Small delay to ensure button is rendered
       setTimeout(() => {
-        const card = cardRef.current;
         const yesBtn = yesBtnRef.current;
-        if (card && yesBtn) {
-          const c = card.getBoundingClientRect();
+        if (yesBtn) {
           const yesRect = yesBtn.getBoundingClientRect();
           // Position it to the right of Yes button initially
           const initialX = yesRect.right + 60;
@@ -157,6 +166,7 @@ export default function App() {
                   ref={noBtnRef}
                   className="btn no"
                   onMouseEnter={onNoAttempt}
+                  onTouchStart={onNoAttempt}
                   onMouseDown={onNoAttempt}
                   onClick={(e) => e.preventDefault()}
                   aria-label="No"
@@ -178,6 +188,7 @@ export default function App() {
                 transform: 'translate(-50%, -50%)'
               }}
               onMouseEnter={onNoAttempt}
+              onTouchStart={onNoAttempt}
               onMouseDown={onNoAttempt}
               onClick={(e) => e.preventDefault()}
               aria-label="No"
