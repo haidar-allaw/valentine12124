@@ -199,7 +199,7 @@ export default function App() {
               <span className="heart-emoji">💓</span>
               <span className="heart-emoji">💟</span>
             </div>
-            <h1 className="celebration-text">yayy! i love you pookie</h1>
+            <h1 className="celebration-text">yayy!! i love you pookie</h1>
             <div className="celebration-hearts">
               <span className="heart-emoji">💕</span>
               <span className="heart-emoji">💖</span>
